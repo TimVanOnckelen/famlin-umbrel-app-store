@@ -40,19 +40,38 @@ Data lives in `${APP_DATA_DIR}/data/{db,uploads,backups,secrets}`.
 
 ## Maintainers
 
-### Bump the version
+### New releases are followed automatically
 
-Run the **Bump Famlin version** workflow (Actions tab) with the new version, or
-send a `famlin-release` repository dispatch with `client_payload.version`. It
-opens a PR that updates three things:
+The **Update Famlin** workflow (`.github/workflows/update.yml`) runs every
+6 hours, and on demand (Actions tab, *Run workflow*, optionally with a version;
+a `famlin-release` repository dispatch with `client_payload.version` is an
+optional fast path). It looks up the latest Famlin release and waits until
+`ghcr.io/timvanonckelen/famlin:<version>` is published (otherwise it quietly
+retries on the next run). It only ever moves forward.
 
-- the image tag and digest in `famlin-famlin/docker-compose.yml`
-- `version` in `famlin-famlin/umbrel-app.yml`
-- `releaseNotes` (a link to the Famlin release)
+- **Normal releases:** it updates the image tag and digest in
+  `famlin-famlin/docker-compose.yml`, `version` and `releaseNotes` in
+  `famlin-famlin/umbrel-app.yml`, runs the same checks as the Lint workflow
+  (yamllint, `docker compose config`), and pushes to `main`. Umbrel offers the
+  update when `version` changes. Commits made with the default `GITHUB_TOKEN`
+  do not trigger other workflows, which is why the checks run inside the
+  update run itself.
+- **Breaking releases** (release notes contain "BREAKING CHANGES", or the major
+  version changes) are validated the same way but opened as a pull request
+  `update/famlin-<version>` for review instead. Checks do not start by
+  themselves on that PR (same token limitation), the update run already ran
+  them.
+
+Each run's job summary says what happened ("already up to date", "image not
+published yet", "updated to x", "breaking: PR opened").
+
+One-time repository settings (Settings, Actions, General): *Workflow
+permissions* set to **Read and write permissions**, and **Allow GitHub Actions
+to create and approve pull requests** enabled. If `main` has branch protection,
+the Actions bot must be allowed to push to it.
 
 By hand: `docker buildx imagetools inspect ghcr.io/timvanonckelen/famlin:<version>`
 and use the top-level (index) digest as `image: ...:<version>@sha256:<digest>`.
-Umbrel offers the update when `version` changes.
 
 ### Submit to the official store
 

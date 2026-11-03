@@ -12,15 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: YAML lint
-        run: pip install --user yamllint && yamllint -c .yamllint.yml .
-      - name: Validate compose file
-        env:
-          APP_DATA_DIR: /tmp/famlin-data
-          APP_SEED: 0000000000000000000000000000000000000000000000000000000000000000
-          APP_HOST: famlin.local
-        run: |
-          # Umbrel injects the app_proxy image at install time; stub it so
-          # compose can validate the file on its own.
-          printf 'services:\n  app_proxy:\n    image: busybox\n' > "$RUNNER_TEMP/stub.yml"
-          docker compose -f famlin-famlin/docker-compose.yml -f "$RUNNER_TEMP/stub.yml" config --quiet
+      - name: Install yamllint
+        run: pip install --user yamllint
+      - name: Shell scripts
+        run: shellcheck -x .github/scripts/*.sh
+      - name: Update script tests
+        run: .github/scripts/test-update.sh
+      - name: YAML lint and compose validation
+        run: .github/scripts/validate.sh

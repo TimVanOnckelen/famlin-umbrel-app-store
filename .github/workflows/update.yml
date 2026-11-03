@@ -1,0 +1,102 @@
+name: Update Famlin
+
+# Follows new Famlin releases without any token or manual step. Commits and PRs
+# made with GITHUB_TOKEN do not trigger other workflows, so the checks lint.yml
+# runs are executed inside this workflow, before the commit lands on main. A
+# breaking release opens a PR for a human to review instead.
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Famlin version to move to (default is the latest release)
+        required: false
+        type: string
+  # Optional fast path: the Famlin repo can send {"version": "x.y.z"}.
+  repository_dispatch:
+    types: [famlin-release]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check for a new release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ github.event.inputs.version || github.event.client_payload.version }}
+        run: |
+          CURRENT=$(sed -n -E 's/^version: *"?([^"]+)"?.*/\1/p' famlin-famlin/umbrel-app.yml | head -n1)
+          export CURRENT
+          .github/scripts/check-release.sh
+
+      - name: Apply bump
+        if: steps.check.outputs.status == 'update'
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+          DIGEST: ${{ steps.check.outputs.digest }}
+          BREAKING: ${{ steps.check.outputs.breaking }}
+        run: .github/scripts/bump.sh "$VERSION" "$DIGEST"
+
+      - name: Validate (same checks as the Lint workflow)
+        if: steps.check.outputs.status == 'update'
+        run: |
+          pip install --user yamllint
+          .github/scripts/validate.sh
+
+      - name: Open pull request (breaking release)
+        id: pr
+        if: steps.check.outputs.status == 'update' && steps.check.outputs.breaking == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: update/famlin-${{ steps.check.outputs.version }}
+          commit-message: "chore: update to Famlin ${{ steps.check.outputs.version }} (breaking)"
+          title: "chore: update to Famlin ${{ steps.check.outputs.version }} (breaking changes)"
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          delete-branch: true
+          body: |
+            Famlin ${{ steps.check.outputs.version }} contains **breaking changes**, so it was not applied automatically.
+
+            Release notes: ${{ steps.check.outputs.release_url }}
+
+            Review them, then merge. Merging bumps the app version, so Umbrel offers the update.
+            Checks do not start automatically on this PR (it was opened with the workflow token);
+            the update run that opened it already passed the same checks as the Lint workflow.
+
+      - name: Commit to main
+        if: steps.check.outputs.status == 'update' && steps.check.outputs.breaking != 'true'
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: update to Famlin ${VERSION}"
+          git push origin HEAD:main
+
+      - name: Summary
+        if: steps.check.outputs.status == 'update'
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+          BREAKING: ${{ steps.check.outputs.breaking }}
+          OPERATION: ${{ steps.pr.outputs.pull-request-operation }}
+          URL: ${{ steps.pr.outputs.pull-request-url }}
+        run: |
+          if [ "$BREAKING" = true ]; then
+            echo "Breaking release ${VERSION}, pull request ${OPERATION:-unchanged}: ${URL}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Updated to Famlin ${VERSION} and pushed to main." >> "$GITHUB_STEP_SUMMARY"
+          fi
