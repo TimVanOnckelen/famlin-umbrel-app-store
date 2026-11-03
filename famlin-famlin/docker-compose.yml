@@ -1,0 +1,60 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      # Format: <app-id>_<service>_1
+      APP_HOST: famlin-famlin_server_1
+      APP_PORT: 3000
+      # Famlin has its own accounts and the phone apps call /api with their
+      # own tokens, so Umbrel's single-password login must not sit in front.
+      PROXY_AUTH_ADD: "false"
+
+  server:
+    image: ghcr.io/timvanonckelen/famlin:0.8.7@sha256:bddc8ba7f37faf7e735206bfa86a7381aa5d08e1b5cd6cd23c81cb8fe978ebdc
+    # Same uid as the image's own "node" user and as Umbrel's app data owner.
+    user: "1000:1000"
+    restart: on-failure
+    stop_grace_period: 30s
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # app_proxy sets X-Forwarded-*.
+      TRUST_PROXY: "true"
+      POSTGRES_HOST: famlin-famlin_db_1
+      POSTGRES_USER: famlin
+      POSTGRES_DB: famlin
+      # Per-install secret derived from the node's seed; stable across restarts.
+      POSTGRES_PASSWORD: ${APP_SEED}
+      # Explicit URL and JWT secret so this also runs on releases from before
+      # Famlin derived them itself (0.8.x). APP_SEED is a per-install hex
+      # secret, URL-safe and longer than the 32 characters JWT_SECRET needs.
+      DATABASE_URL: postgresql://famlin:${APP_SEED}@famlin-famlin_db_1:5432/famlin?schema=public
+      JWT_SECRET: ${APP_SEED}
+      DATA_DIR: /app/data
+    volumes:
+      - ${APP_DATA_DIR}/data/uploads:/app/uploads
+      - ${APP_DATA_DIR}/data/backups:/app/backups
+      - ${APP_DATA_DIR}/data/secrets:/app/data
+
+  db:
+    image: postgres:16-alpine
+    # Left as root: the postgres entrypoint fixes ownership of PGDATA itself
+    # and drops to the postgres user (a rootless start is not supported).
+    restart: on-failure
+    stop_grace_period: 1m
+    environment:
+      POSTGRES_USER: famlin
+      POSTGRES_DB: famlin
+      POSTGRES_PASSWORD: ${APP_SEED}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ${APP_DATA_DIR}/data/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U famlin -d famlin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

@@ -1,0 +1,26 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: YAML lint
+        run: pip install --user yamllint && yamllint -c .yamllint.yml .
+      - name: Validate compose file
+        env:
+          APP_DATA_DIR: /tmp/famlin-data
+          APP_SEED: 0000000000000000000000000000000000000000000000000000000000000000
+          APP_HOST: famlin.local
+        run: |
+          # Umbrel injects the app_proxy image at install time; stub it so
+          # compose can validate the file on its own.
+          printf 'services:\n  app_proxy:\n    image: busybox\n' > "$RUNNER_TEMP/stub.yml"
+          docker compose -f famlin-famlin/docker-compose.yml -f "$RUNNER_TEMP/stub.yml" config --quiet

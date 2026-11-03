@@ -1,0 +1,38 @@
+manifestVersion: 1
+id: famlin-famlin
+category: social
+name: Famlin
+version: "0.8.7"
+tagline: Private family updates, photos and milestones
+description: >-
+  Famlin is a private, self-hosted app for sharing family updates. Post
+  photos and videos, write milestones, comment, react, tell 24-hour stories,
+  plan trips together and keep everything on your own server instead of a
+  social network.
+
+
+  After installing, open the app and create the first (administrator) account
+  on the setup screen. Then invite your family from the admin page at /admin.
+  Family members can use the iOS and Android apps or the web app; they need
+  to reach your server from outside your home, see the remote access notes in
+  the community app store README.
+releaseNotes: >-
+  See https://github.com/TimVanOnckelen/famlin/releases/tag/v0.8.7 for what changed.
+developer: Tim Van Onckelen
+website: https://famlin.app
+dependencies: []
+repo: https://github.com/TimVanOnckelen/famlin
+support: https://github.com/TimVanOnckelen/famlin/issues
+port: 3000
+# The member web app is served at /. The admin UI is at /admin.
+path: ""
+# First visitor creates the admin account, so there are no default credentials.
+defaultUsername: ""
+defaultPassword: ""
+icon: https://raw.githubusercontent.com/TimVanOnckelen/famlin/main/mobile/assets/icon.png
+gallery:
+  - https://raw.githubusercontent.com/TimVanOnckelen/famlin/main/website/assets/images/screenshots/web-feed.webp
+  - https://raw.githubusercontent.com/TimVanOnckelen/famlin/main/website/assets/images/screenshots/feed.webp
+  - https://raw.githubusercontent.com/TimVanOnckelen/famlin/main/website/assets/images/screenshots/trips.webp
+submitter: Tim Van Onckelen
+submission: https://github.com/TimVanOnckelen/famlin/issues/342
