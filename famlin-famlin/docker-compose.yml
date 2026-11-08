@@ -11,7 +11,7 @@ services:
       PROXY_AUTH_ADD: "false"
 
   server:
-    image: ghcr.io/timvanonckelen/famlin:0.8.7@sha256:bddc8ba7f37faf7e735206bfa86a7381aa5d08e1b5cd6cd23c81cb8fe978ebdc
+    image: ghcr.io/timvanonckelen/famlin:0.9.0@sha256:04881c424944d496328cc9f0e4f0414f5d4a516a16808b6a5710c365cc59ab02
     # Same uid as the image's own "node" user and as Umbrel's app data owner.
     user: "1000:1000"
     restart: on-failure
