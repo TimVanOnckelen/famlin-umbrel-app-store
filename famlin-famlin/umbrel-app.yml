@@ -2,7 +2,7 @@ manifestVersion: 1
 id: famlin-famlin
 category: social
 name: Famlin
-version: "0.9.0"
+version: "0.9.1"
 tagline: Private family updates, photos and milestones
 description: >-
   Famlin is a private, self-hosted app for sharing family updates. Post
@@ -17,7 +17,7 @@ description: >-
   to reach your server from outside your home, see the remote access notes in
   the community app store README.
 releaseNotes: >-
-  See https://github.com/TimVanOnckelen/famlin/releases/tag/v0.9.0 for what changed.
+  See https://github.com/TimVanOnckelen/famlin/releases/tag/v0.9.1 for what changed.
 developer: Tim Van Onckelen
 website: https://famlin.app
 dependencies: []
